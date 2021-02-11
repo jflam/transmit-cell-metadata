@@ -83,12 +83,12 @@ message to the kernel.
 
 Here's a minimal representation of the execute message for the above cell:
 
-```json
+```js
 {
   "header" : {
       "msg_id": "...",
       "msg_type": "...",
-      ...
+      //...
   },
   "parent_header": {},
   "content": {
@@ -151,12 +151,12 @@ The section should return to the examples given in the previous section, and exp
 [Execute](https://jupyter-client.readthedocs.io/en/stable/messaging.html#execute)
 message to the kernel. The general form of a message is:
 
-```json
+```js
 {
   "header" : {
     "msg_id": "...",
     "msg_type": "...",
-    ...
+    //...
   },
   "parent_header": {},
   "metadata": {},
@@ -168,38 +168,38 @@ message to the kernel. The general form of a message is:
 Different message types have different schemas for the content dict. The schema
 of the content dict of an Execute message follows:
 
-```json
+```js
 content = {
-  # Source code to be executed by the kernel, one or more lines.
+  // Source code to be executed by the kernel, one or more lines.
   "code" : str,
 
-  # A boolean flag which, if True, signals the kernel to execute
-  # this code as quietly as possible.
-  # silent=True forces store_history to be False,
-  # and will *not*
-  #   - broadcast output on the IOPUB channel
-  #   - have an execute_result
-  # The default is False.
+  // A boolean flag which, if True, signals the kernel to execute
+  // this code as quietly as possible.
+  // silent=True forces store_history to be False,
+  // and will *not*
+  //   - broadcast output on the IOPUB channel
+  //   - have an execute_result
+  // The default is False.
   "silent" : bool,
 
-  # A boolean flag which, if True, signals the kernel to populate history
-  # The default is True if silent is False.  If silent is True, store_history
-  # is forced to be False.
+  // A boolean flag which, if True, signals the kernel to populate history
+  // The default is True if silent is False.  If silent is True, store_history
+  // is forced to be False.
   "store_history" : bool,
 
-  # A dict mapping names to expressions to be evaluated in the
-  # user's dict. The rich display-data representation of each will be evaluated after execution.
-  # See the display_data content for the structure of the representation data.
+  // A dict mapping names to expressions to be evaluated in the
+  // user's dict. The rich display-data representation of each will be evaluated after execution.
+  // See the display_data content for the structure of the representation data.
   "user_expressions" : dict,
 
-  # Some frontends do not support stdin requests.
-  # If this is true, code running in the kernel can prompt the user for input
-  # with an input_request message (see below). If it is false, the kernel
-  # should not send these messages.
+  // Some frontends do not support stdin requests.
+  // If this is true, code running in the kernel can prompt the user for input
+  // with an input_request message (see below). If it is false, the kernel
+  // should not send these messages.
   "allow_stdin" : True,
 
-  # A boolean flag, which, if True, aborts the execution queue if an exception is encountered.
-  # If False, queued execute_requests will execute even if this request generates an exception.
+  // A boolean flag, which, if True, aborts the execution queue if an exception is encountered.
+  // If False, queued execute_requests will execute even if this request generates an exception.
   "stop_on_error" : True,
 }
 ```
@@ -208,18 +208,18 @@ We propose the addition of a new `metadata` dict to the `content` dict schema in
 nbformat. Cell metadata would be transmitted to the kernel in this dict.
 Consider the following cell in a notebook:
 
-```json
+```js
 {
   "cell_type" : "code",
-  "execution_count": 1, # integer or null
+  "execution_count": 1, // integer or null
   "metadata" : {
-    "pick_conda_env" : "python38", # identify the conda env to run this cell in
+    "pick_conda_env" : "python38", // identify the conda env to run this cell in
     "collapsed" : True, 
     "scrolled": False, 
   },
   "source" : "1+1",
   "outputs": [{
-    # list of output dicts (described below)
+    // list of output dicts (described below)
     "output_type": "stream",
     ...
   }],
@@ -230,12 +230,12 @@ The contents of the cell `metadata` dict in the notebook would be transmitted as
 part of the EXECUTE message in the proposed `metadata` dict within the `content`
 dict:
 
-```json
+```js
 {
   "header" : {
       "msg_id": "...",
       "msg_type": "...",
-      ...
+      //...
   },
   "parent_header": {},
   "content": {
