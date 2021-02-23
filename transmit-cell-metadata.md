@@ -10,15 +10,15 @@ date-started: 2021-02-10
 
 This proposal discusses transmitting cell metadata as part of the Jupyter
 Messaging Protocol execute message requests. It is up to the kernel to interpret
-this metadata as it sees fit. 
+this metadata based on the scenario. 
 
 # Motivation
 
-By transmitting cell metadata inline with the execute message request,
+By transmitting cell metadata inline with the execute message request, Jupyter
 implementations will have a reliable channel to transmit additional metadata to
-the kernel. Extensions will have a place to store additional information that
-was often transmitted using magic commands. Here are some use cases for this
-proposal:
+the kernel. Extensions can also use this channel to transmit additional
+information that was often transmitted using magic commands. Here are some use
+cases for this proposal:
 
 -   Automatically route requests to an appropriate kernel via libraries like
     [allthekernels](https://github.com/minrk/allthekernels) without need for
@@ -36,10 +36,11 @@ proposal:
 
 Transmitting cell metadata enables many scenarios. Some of the scenarios are
 briefly described in the Motivation section. In this section, we'll consider a
-scenario where you'd like to run the cell code using a specific kernel. Today
-you'd typically have the user include a magic command in the cell to identify
-the conda environment. This interferes with other extensions that may want to
-use the contents of the cell, e.g., autocomplete providers would now need to be
+scenario in more detail: running cell code using a specific kernel. 
+
+Today you'd typically have the user include a magic command in the cell to
+identify the kernel. This interferes with other extensions that may want to use
+the contents of the cell, e.g., autocomplete providers would now need to be
 aware of and ignore the syntax of magics.
 
 ## Simple example
@@ -66,11 +67,12 @@ kernel instead. Now, let's consider a minimal JSON fragment for the above cell:
 }
 ```
 
-You can see that the cell metadata dict contains an entry that specifices that
-the `kernel` is `python3`. But where did the `"kernel": "python3"` metadata come
-from? What wrote it into the cell metadata in the first place? So elaborating a
-bit more on the user experience here, you could imagine a client extension
-providing some additional UI affordances such as a cell drop-down that lets the
+The cell metadata dict contains an entry that specifices that the `kernel` is
+`python3`. But where did the `"kernel": "python3"` metadata come from? What
+wrote it into the cell metadata in the first place? 
+
+Elaborating a bit more on the user experience here, you could imagine a client
+extension providing some additional UI such as a cell drop-down that lets the
 user pick from a list of installed kernels on the user's machine. The user picks
 one, and the kernelspec is written to that cell's metadata.
 
@@ -113,7 +115,7 @@ implementation itself, e.g., language or client capabilities like screen size.
 
 ## Metadata Key Conflicts
 
-There is the possibility for conflicts across extensions that want to add their
+There is the potential for conflicts across extensions that want to add their
 own cell metadata to notebook file. We recommend that extensions namespace their
 metadata keys to minimize the possibility of conflicts between extensions. For
 example, in the `allthekernels` case it could look like:
@@ -132,24 +134,13 @@ example, in the `allthekernels` case it could look like:
 ## Kernels declaring the need for Cell Metadata
 
 Kernels should have a way to declare that they require metadata to be sent. For a 
-kernel like `allthekernels` it *needs* to have 
-
-TODO: in detail section.
-
+kernel like `allthekernels` it *needs* to have cell metadata that tells 
 
 # Reference-level explanation
 
-This is the technical portion of the JEP. Explain the design in
-sufficient detail that:
-
-- Its interaction with other features is clear.
-- It is reasonably clear how the feature would be implemented.
-- Corner cases are dissected by example.
-
-The section should return to the examples given in the previous section, and explain more fully how the detailed proposal makes those examples work.
-
-[Execute](https://jupyter-client.readthedocs.io/en/stable/messaging.html#execute)
-message to the kernel. The general form of a message is:
+Cell metadata will be transmitted to the kernel as part of the
+[Execute](https://jupyter-client.readthedocs.io/en/stable/messaging.html#execute).
+The general form of a message is:
 
 ```js
 {
@@ -165,8 +156,8 @@ message to the kernel. The general form of a message is:
 }
 ```
 
-Different message types have different schemas for the content dict. The schema
-of the content dict of an Execute message follows:
+Different message types have different schemas for the `content` dict. The
+schema of the `content` dict of an Execute message follows:
 
 ```js
 content = {
@@ -205,30 +196,38 @@ content = {
 ```
 
 We propose the addition of a new `metadata` dict to the `content` dict schema in
-nbformat. Cell metadata would be transmitted to the kernel in this dict.
-Consider the following cell in a notebook:
+[nbformat](https://nbformat.readthedocs.io/en/latest/). This will be used to
+transmit the cell metadata for the executed cell. 
+
+In cases where Jupyter extensions generate their own metadata, that keys for the
+metadata should be namespaced using an extension-specific prefix. The prefix is
+ideally human-readable and identifies the extension that wrote the metadata.
+There is no current provision to guarantee global uniqueness for these prefixes
+in a way that other technologies, e.g., XML Namespaces do using URIs.
+
+Below is a nominal example of both of these proposals in action. This is a
+fragment of a notebook that contains a cell to be executed. Note that the
+`kernel` attribute is namespaced using `allthekernels` and the existing Jupyter
+attributes `collapsed` and `scrolled` are not namespaced.
 
 ```js
 {
   "cell_type" : "code",
-  "execution_count": 1, // integer or null
+  "execution_count": 1, 
   "metadata" : {
-    "pick_conda_env" : "python38", // identify the conda env to run this cell in
+    "allthekernels:kernel" : "python3", 
     "collapsed" : True, 
     "scrolled": False, 
   },
   "source" : "1+1",
   "outputs": [{
-    // list of output dicts (described below)
     "output_type": "stream",
     ...
   }],
 }
 ```
 
-The contents of the cell `metadata` dict in the notebook would be transmitted as
-part of the EXECUTE message in the proposed `metadata` dict within the `content`
-dict:
+Below is the corresponding EXECUTE message:
 
 ```js
 {
@@ -241,7 +240,7 @@ dict:
   "content": {
     "code": "1+1",
     "metadata": {
-      "pick_conda_env": "python38", 
+      "allthekernels:kernel": "python3", 
       "collapsed": True, 
       "scrolled": False, 
     },
@@ -250,46 +249,95 @@ dict:
   "buffers": [],
 }
 ```
+
 # Rationale and alternatives
 
-- Why is this choice the best in the space of possible designs?
-- What other designs have been considered and what is the rationale for not choosing them?
-- What is the impact of not doing this?
+We considered another approach for transmitting the cell metadata before we
+arrived at the recommendation in this document:
+
+Transmitting the metadata as a new dict in the EXECUTE message as shown in this
+nominal example:
+
+```js
+{
+  "header" : {
+      "msg_id": "...",
+      "msg_type": "...",
+      //...
+  },
+  "parent_header": {},
+  "metadata": {
+    "allthekernels:kernel": "python3", 
+    "collapsed": True, 
+    "scrolled": False, 
+  },
+  "content": {
+    "code": "1+1",
+  },
+  "content": {},
+  "buffers": [],
+}
+```
+
+If the proposal is not accepted, we will miss an opportunity to improve 
+the ability to send out-of-band information to the kernel with the EXECUTE
+message. Scenarios like polyglot notebooks, or adaptive rendering based
+on changes to the user's browser window size or graphics settings would
+not be realized.
 
 # Prior art
 
-Discuss prior art, both the good and the bad, in relation to this proposal.
-A few examples of what this can include are:
+## allthekernels
 
-- Does this feature exist in other tools or ecosystems, and what experience have their community had?
-- For community proposals: Is this done by some other community and what were their experiences with it?
-- For other teams: What lessons can we learn from what other communities have done here?
-- Papers: Are there any published papers or great posts that discuss this? If you have some relevant papers to refer to, this can serve as a more detailed theoretical background.
+`allthekernels` uses a special syntax ("> __kernelspec__") within the cell to
+specify the kernel to use to run the code in the cell. This would be replaced 
+by writing the kernelspec as cell metadata and transmitting it to the kernel
+as described earlier in this document.
 
-This section is intended to encourage you as an author to think about the lessons from other languages, provide readers of your JEP with a fuller picture.
-If there is no prior art, that is fine - your ideas are interesting to us whether they are brand new or if it is an adaptation from other languages.
+![allthekernels screenshot](./allthekernels.png)
 
+[GitHub](https://github.com/minrk/allthekernels)
+
+## Script of Scripts (SoS)
+
+`SoS` is a combination of a meta-kernel (authors call it a "super kernel") that
+controls a set of child kernels and magic commands to identify the kernel to
+target in a cell. It also provides a shared context in the “super kernel” to
+share variables and data between different kernels. Requires an extension to
+manage language metadata (see screenshot below)
+
+![sos architecture](./sos-1.png)
+![sos screenshot](./sos-2.png)
+
+[GitHub](https://github.com/vatlab/sos-notebook)
+[JupyterCon Presentation](https://www.youtube.com/watch?v=U75eKosFbp8)
+[Documentation](https://vatlab.github.io/sos-docs/notebook.html#content)
+
+## nteract pick
+
+`pick` is a kernel proxy that uses magics to specify an existing conda
+environment to use or an environment to create to run code in the notebook.
+
+![pick architecture](pick.png)
+![pick screenshot](pick-2.png)
+
+[Github](https://github.com/nteract/pick)
 
 # Unresolved questions
 
-- What parts of the design do you expect to resolve through the JEP process before this gets merged?
-- What related issues do you consider out of scope for this JEP that could be addressed in the future independently of the solution that comes out of this JEP?
+We would like to make decisions about:
+
+- Whether the cell metadata is transmitted as a new dict in the EXECUTE message,
+  or whether it is transmitted as a new dict in the content field of the EXECUTE
+  message.
+- Decide whether kernels need to explicitly declare the metadata that they need,
+  and if so, the mechansim for communicating that declaration to the Jupyter
+  implementation.
 
 # Future possibilities
 
-Think about what the natural extension and evolution of your proposal would
-be and how it would affect the Jupyter community at-large. Try to use this section as a tool to more fully consider all possible
-interactions with the project and language in your proposal.
-Also consider how the this all fits into the roadmap for the project
-and of the relevant sub-team.
-
-This is also a good place to "dump ideas", if they are out of scope for the
-JEP you are writing but otherwise related.
-
-If you have tried and cannot think of any future possibilities,
-you may simply state that you cannot think of anything.
-
-Note that having something written down in the future-possibilities section
-is not a reason to accept the current or a future JEP; such notes should be
-in the section on motivation or rationale in this or subsequent JEPs.
-The section merely provides additional information.
+This proposal will add a new foundational capability to Jupyter: the ability to
+transmit additional information to the kernel that the kernel can use to make
+better decisions about how it will execute the user's code. It will make it much
+more straightforward to have independent collaboration on polyglot notebooks,
+notebooks that contain code in more than one programming language.
