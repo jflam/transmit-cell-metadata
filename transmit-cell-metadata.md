@@ -1,6 +1,6 @@
 ---
 title: Transmitting Cell Metadata in Jupyter Execute Requests
-authors: John Lam (jflam@microsoft.com), Matthew Seal (zzz@zzz), Carol Willing (zzz@zzz)
+authors: John Lam (jflam@microsoft.com), Matthew Seal (matt@noteable.io), Carol Willing (zzz@zzz)
 issue-number: <pre-proposal-issue-number>
 pr-number: <proposal-pull-request-number>
 date-started: 2021-02-10
@@ -136,7 +136,7 @@ example, in the `allthekernels` case it could look like:
 Kernels should have a way to declare that they require metadata to be sent. For a 
 kernel like `allthekernels` it *needs* to have cell metadata that tells 
 
-# Reference-level explanation
+# Reference-level Explanation
 
 Cell metadata will be transmitted to the kernel as part of the
 [Execute](https://jupyter-client.readthedocs.io/en/stable/messaging.html#execute).
@@ -250,7 +250,9 @@ Below is the corresponding EXECUTE message:
 }
 ```
 
-# Rationale and alternatives
+# Rationale and Alternatives
+
+## Metadata at Root
 
 We considered another approach for transmitting the cell metadata before we
 arrived at the recommendation in this document:
@@ -274,18 +276,42 @@ nominal example:
   "content": {
     "code": "1+1",
   },
-  "content": {},
   "buffers": [],
 }
 ```
 
-If the proposal is not accepted, we will miss an opportunity to improve 
-the ability to send out-of-band information to the kernel with the EXECUTE
-message. Scenarios like polyglot notebooks, or adaptive rendering based
-on changes to the user's browser window size or graphics settings would
-not be realized.
+We decided against this pattern as the metadata is really associated with the
+code being executed, not on the execute request message itself. Putting the cell
+metadata at the root of the payload might conflict with future execute specific
+operators for the message payload that might need to be present beyond the
+header fields in the future.
 
-# Prior art
+## Allow-List Pattern
+
+In looking at metadata that should or shouldn't be sent, we investigated if the
+fields that should be passed should be allow-list or block-list pattern
+matching. e.g. Allow `allthekernels:kernel` metadata only. The issue is that
+this greatly complicates existing applications over the current proposal as
+kernels would need to indicate the metadata fields they accept, and clients
+would then need to track that and filter fields sent back during execution. The
+attributes within the metadata today are A) small in size and B) not harmful to
+send across the wire so keeping the solution simpler was the preferred pattern
+in the proposal.
+
+## Impact
+
+This proposal will add a new foundational capability to Jupyter: the ability to
+transmit additional information to the kernel that the kernel can use to make
+better decisions about how it will execute the user's code. It will make it much
+more straightforward to have independent collaboration on polyglot notebooks,
+notebooks that contain code in more than one programming language.
+
+If the proposal is not accepted, we will miss an opportunity to improve the
+ability to send out-of-band information to the kernel with the EXECUTE message.
+Scenarios like polyglot notebooks, or adaptive rendering based on changes to the
+user's browser window size or graphics settings would not be realized.
+
+# Prior Art
 
 ## allthekernels
 
@@ -323,9 +349,10 @@ environment to use or an environment to create to run code in the notebook.
 
 [Github](https://github.com/nteract/pick)
 
-# Unresolved questions
+# Open Questions
 
-We would like to make decisions about:
+We have an opinion around some decision points but would be open to suggestions
+around:
 
 - Whether the cell metadata is transmitted as a new dict in the EXECUTE message,
   or whether it is transmitted as a new dict in the content field of the EXECUTE
@@ -333,11 +360,3 @@ We would like to make decisions about:
 - Decide whether kernels need to explicitly declare the metadata that they need,
   and if so, the mechansim for communicating that declaration to the Jupyter
   implementation.
-
-# Future possibilities
-
-This proposal will add a new foundational capability to Jupyter: the ability to
-transmit additional information to the kernel that the kernel can use to make
-better decisions about how it will execute the user's code. It will make it much
-more straightforward to have independent collaboration on polyglot notebooks,
-notebooks that contain code in more than one programming language.
