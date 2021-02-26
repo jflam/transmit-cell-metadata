@@ -280,11 +280,23 @@ nominal example:
 }
 ```
 
-We decided against this pattern as the metadata is really associated with the code being executed, not on the execute request message itself. Putting the cell metadata at the root of the payload might conflict with future execute specific operators for the message payload that might need to be present beyond the header fields in the future.
+We decided against this pattern as the metadata is really associated with the
+code being executed, not on the execute request message itself. Putting the cell
+metadata at the root of the payload might conflict with future execute specific
+operators for the message payload that might need to be present beyond the
+header fields in the future.
 
 ## Allow-List Pattern
 
-In looking at metadata that should or shouldn't be sent, we investigated if the fields that should be passed should be allow-list or block-list pattern matching. e.g. Allow `allthekernels:kernel` metadata only. The issue is that this greatly complicates existing applications over the current proposal as kernels would need to indicate the metadata fields they accept, and clients would then need to track that and filter fields sent back during execution. The attributes within the metadata today are A) small in size and B) not harmful to send across the wire so keeping the solution simpler was the preferred pattern in the proposal.
+In looking at metadata that should or shouldn't be sent, we investigated if the
+fields that should be passed should be allow-list or block-list pattern
+matching. e.g. Allow `allthekernels:kernel` metadata only. The issue is that
+this greatly complicates existing applications over the current proposal as
+kernels would need to indicate the metadata fields they accept, and clients
+would then need to track that and filter fields sent back during execution. The
+attributes within the metadata today are A) small in size and B) not harmful to
+send across the wire so keeping the solution simpler was the preferred pattern
+in the proposal.
 
 ## Impact
 
@@ -294,11 +306,10 @@ better decisions about how it will execute the user's code. It will make it much
 more straightforward to have independent collaboration on polyglot notebooks,
 notebooks that contain code in more than one programming language.
 
-If the proposal is not accepted, we will miss an opportunity to improve 
-the ability to send out-of-band information to the kernel with the EXECUTE
-message. Scenarios like polyglot notebooks, or adaptive rendering based
-on changes to the user's browser window size or graphics settings would
-not be realized.
+If the proposal is not accepted, we will miss an opportunity to improve the
+ability to send out-of-band information to the kernel with the EXECUTE message.
+Scenarios like polyglot notebooks, or adaptive rendering based on changes to the
+user's browser window size or graphics settings would not be realized.
 
 # Prior Art
 
@@ -340,7 +351,8 @@ environment to use or an environment to create to run code in the notebook.
 
 # Open Questions
 
-We have an opinion around some decision points but would be open to suggestions around:
+We have an opinion around some decision points but would be open to suggestions
+around:
 
 - Whether the cell metadata is transmitted as a new dict in the EXECUTE message,
   or whether it is transmitted as a new dict in the content field of the EXECUTE
