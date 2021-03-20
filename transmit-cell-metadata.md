@@ -8,10 +8,10 @@ date-started: 2021-02-10
 
 # Summary
 
-This proposal discusses the **transmission of cell metadata** with execute message
-requests and would modify the Jupyter Messaging Protocol. Individual kernels would
-interpret or ignore this metadata. This enables flexibility in different usage
-scenarios implemented in various front-end clients.
+This proposal discusses the **transmission of cell metadata** with execute
+message requests and would modify the Jupyter Messaging Protocol. Individual
+kernels would interpret or ignore this metadata. This enables flexibility in
+different usage scenarios implemented in various front-end clients.
 
 # Motivation
 
@@ -19,8 +19,8 @@ By transmitting cell metadata inline with the execute message request, Jupyter
 implementations will have a reliable channel to transmit additional metadata to
 the kernel in a standard way.
 
-Notebook extensions can also use this channel to transmit additional
-information that was often transmitted using magic commands.
+Notebook extensions can also use this channel to transmit additional information
+that was often transmitted using magic commands.
 
 Some use cases which motivated this proposal are:
 
@@ -38,14 +38,14 @@ Some use cases which motivated this proposal are:
 
 # Guide-level explanation
 
-Transmitting cell metadata enables many scenarios as described
-briefly in the Motivation section. In this section, we consider one
-scenario in more detail: running a code cell using a specific kernel. 
+Transmitting cell metadata enables many scenarios as described briefly in the
+Motivation section. In this section, we consider one scenario in more detail:
+running a code cell using a specific kernel. 
 
-Today a typical approach is for the user to include a magic command in the cell that
-identifies the kernel. This approach interferes with other extensions that may want to use
-the contents of the cell, e.g., autocomplete providers would now need to be
-aware of and ignore the syntax of magics.
+Today a typical approach is for the user to include a magic command in the cell
+that identifies the kernel. This approach interferes with other extensions that
+may want to use the contents of the cell, e.g., autocomplete providers would now
+need to be aware of and ignore the syntax of magics.
 
 ## Simple example
 
@@ -76,9 +76,10 @@ The cell metadata dict contains an entry that specifices that the `kernel` is
 wrote it into the cell metadata in the first place? 
 
 Elaborating a bit more on the user experience here, you could imagine a client
-extension providing some additional UI elements such as a cell drop-down that lets the
-user pick from a list of installed kernels on the user's machine. The user picks
-one, and the kernelspec or its identifier is written to that cell's metadata.
+extension providing some additional UI elements such as a cell drop-down that
+lets the user pick from a list of installed kernels on the user's machine. The
+user picks one, and the kernelspec or its identifier is written to that cell's
+metadata.
 
 In this example, there is also a corresponding `allthekernels` kernel that is
 installed on the user's machine that knows how to multiplex between different
@@ -137,10 +138,10 @@ example, in the `allthekernels` case it could look like:
 
 ## Kernels declaring the need for Cell Metadata
 
-Kernels should have a way to declare that they require metadata to be sent. For a 
-kernel like `allthekernels`, this kernel *needs* to have cell metadata that specifies the
-available options. The kernel on receipt of the metadata can take the appropriate
-action or warn that it requires additional information.
+Kernels should have a way to declare that they require metadata to be sent. For
+a kernel like `allthekernels`, this kernel *needs* to have cell metadata that
+specifies the available options. The kernel on receipt of the metadata can take
+the appropriate action or warn that it requires additional information.
 
 # Reference-level Explanation
 
@@ -211,10 +212,10 @@ ideally human-readable and identifies the extension that wrote the metadata.
 There is no current provision to guarantee global uniqueness for these prefixes
 in a way that other technologies, e.g., XML Namespaces do using URIs.
 
-Below is a nominal example of these proposals, cell metadata and execute requests, in action.
-Thhis fragment of a notebook contains a cell to be executed. Note that the
-`kernel` attribute is namespaced using `allthekernels` and the existing Jupyter
-attributes `collapsed` and `scrolled` are not namespaced.
+Below is a nominal example of these proposals, cell metadata and execute
+requests, in action. This fragment of a notebook contains a cell to be executed.
+Note that the `kernel` attribute is namespaced using `allthekernels` and the
+existing Jupyter attributes `collapsed` and `scrolled` are not namespaced.
 
 ```js
 {
@@ -260,10 +261,11 @@ Below is the corresponding EXECUTE message:
 
 ## Rejected alternative: Metadata at Root
 
-We considered another approach, root-level cell metadata, before we
-arrived at this JEP's proposed recommendation.
+We considered another approach, root-level cell metadata, before we arrived at
+this JEP's proposed recommendation.
 
-Transmitting the metadata as a new root dict in the EXECUTE message is illustrated here:
+Transmitting the metadata as a new root dict in the EXECUTE message is
+illustrated here:
 
 ```js
 {
@@ -285,31 +287,30 @@ Transmitting the metadata as a new root dict in the EXECUTE message is illustrat
 }
 ```
 
-We decided against this pattern as the metadata is specificallly associated with the
-code being executed, not on the execute request message itself. Putting the cell
-metadata at the root of the payload might conflict with future execute specific
-operators for the message payload that might need to be present beyond the
-header fields in the future.
+We decided against this pattern as the metadata is specifically associated with
+the code being executed, not on the execute request message itself. Putting the
+cell metadata at the root of the payload might conflict with future execute
+specific operators for the message payload that might need to be present beyond
+the header fields in the future.
 
 ## Rejected approach: Allow-List Pattern
 
 In looking at metadata that should or shouldn't be sent, we investigated if the
-fields to be passed should be allow-list or block-list pattern
-matching. e.g. Allow `allthekernels:kernel` metadata only. The issue is that
-this greatly complicates existing applications over the current proposal as
-kernels would need to indicate the metadata fields they accept, and clients
-would then need to track that and filter fields sent back during execution. The
-attributes within the metadata today are: A) small in size and B) not harmful to
-send across the wire so keeping the solution simpler was the preferred pattern
-in the proposal.
+fields to be passed should be allow-list or block-list pattern matching. e.g.
+Allow `allthekernels:kernel` metadata only. The issue is that this greatly
+complicates existing applications over the current proposal as kernels would
+need to indicate the metadata fields they accept, and clients would then need to
+track that and filter fields sent back during execution. The attributes within
+the metadata today are: A) small in size and B) not harmful to send across the
+wire so keeping the solution simpler was the preferred pattern in the proposal.
 
 ## Impact
 
-This proposal will add a new foundational capability to the Jupyter Messaging Protocol: the ability to
-transmit additional information to the kernel which the kernel can use to make
-better decisions about execution of user code. This makes it much
-more straightforward to have independent collaboration on polyglot notebooks
-(notebooks that contain code in more than one programming language).
+This proposal will add a new foundational capability to the Jupyter Messaging
+Protocol: the ability to transmit additional information to the kernel which the
+kernel can use to make better decisions about execution of user code. This makes
+it much more straightforward to have independent collaboration on polyglot
+notebooks (notebooks that contain code in more than one programming language).
 
 If the proposal is accepted, we benefit from an opportunity to improve the
 ability to send out-of-band information to the kernel with the EXECUTE message.
